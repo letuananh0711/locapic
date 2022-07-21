@@ -6,17 +6,19 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import HomeScreen from './screens/HomeScreen';
 import MapScreen from './screens/MapScreen';
 import ChatScreen from './screens/ChatScreen';
+import POIScreen from './screens/POIScreen';
 
 import { Ionicons } from '@expo/vector-icons';
 
 import { createStore, combineReducers } from 'redux';
 import { Provider } from 'react-redux'
 import userPseudo from './reducers/pseudo';
+import listPOI from './reducers/listPOI';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
-const store = createStore(combineReducers({userPseudo}));
+const store = createStore(combineReducers({userPseudo, listPOI}));
 
 export default function App() {
   return (
@@ -41,6 +43,8 @@ const LocaPicScreen = () => {
             iconName = 'navigate-outline';
           } else if (route.name === 'Chat') {
             iconName = 'chatbubbles-outline';
+          } else if (route.name === 'POI') {
+            iconName = 'bookmarks-outline';
           }
           return <Ionicons name={iconName} size={24} color={color} />
         },
@@ -52,6 +56,7 @@ const LocaPicScreen = () => {
       }}
     >
       <Tab.Screen name="Map" component={MapScreen} />
+      <Tab.Screen name="POI" component={POIScreen} />
       <Tab.Screen name="Chat" component={ChatScreen} />
     </Tab.Navigator>
   );

@@ -1,7 +1,7 @@
-import { StyleSheet, Text, View, ScrollView } from 'react-native';
-import Icon from 'react-native-vector-icons/FontAwesome';
+import { StyleSheet, Text, ScrollView, SafeAreaView, KeyboardAvoidingView } from 'react-native';
+import FontAwesomeIcon from 'react-native-vector-icons/FontAwesome';
 import { Input, Button, ListItem } from 'react-native-elements'
-import {connect} from 'react-redux';
+import { connect } from 'react-redux';
 
 const chats = [
     {
@@ -56,8 +56,7 @@ const chats = [
 
 function ChatScreen(props) {
     return (
-        <View style={styles.container}>
-            <Text>{props.pseudo}</Text>
+        <SafeAreaView style={styles.container}>
             <ScrollView>
                 {
                     chats.map((c, i) => (
@@ -70,20 +69,24 @@ function ChatScreen(props) {
                     ))
                 }
             </ScrollView>
-            <Input placeholder='Your message...' />
-            <Button
-                title='Send'
-                onPress={() => props.navigation.navigate('LocaPic')}
-                icon={
-                    <Icon
-                        name="envelope"
-                        size={15}
-                        color="white"
-                    />
-                }
-                buttonStyle={styles.btnContainerSend}
-            />
-        </View>
+
+            <KeyboardAvoidingView 
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+                <Input placeholder='Your message...' />
+                <Button
+                    title='Send'
+                    onPress={() => props.navigation.navigate('LocaPic')}
+                    icon={
+                        <FontAwesomeIcon
+                            name="envelope"
+                            size={15}
+                            color="white"
+                        />
+                    }
+                    buttonStyle={styles.btnContainerSend}
+                />
+            </KeyboardAvoidingView>
+        </SafeAreaView >
     );
 }
 
@@ -93,13 +96,13 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
     },
     btnContainerSend: {
-        backgroundColor: 'red',
+        backgroundColor: '#eb4d4b',
     }
 });
 
-const mapStateToProps = (state) =>  {
+const mapStateToProps = (state) => {
     return {
-      pseudo: state.userPseudo,
+        pseudo: state.userPseudo,
     }
 }
 
