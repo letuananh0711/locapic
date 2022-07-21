@@ -37,9 +37,11 @@ function ChatScreen(props) {
                 {
                     listMessage.map((message, i) => 
                         (
-                            <View key={i} style={message.pseudo===props.pseudo ? styles.messageRight : styles.message}>
-                                <Text style={message.pseudo===props.pseudo ? styles.titleRight : styles.title}>{message.currentMessage}</Text>
-                                <Text style={message.pseudo===props.pseudo ? styles.subtitleRight : styles.subtitle}>{message.pseudo}</Text>
+                            <View key={i} style={[{flex: 1}, message.pseudo===props.pseudo ? {flexDirection: 'row-reverse'} : {flexDirection: 'row'}]}>
+                                <View style={styles.message}>
+                                    <Text style={[styles.title, message.pseudo===props.pseudo ? styles.textRight : styles.textLeft]}>{message.currentMessage}</Text>
+                                    <Text style={[styles.subtitle, message.pseudo===props.pseudo ? styles.textRight : styles.textLeft]}>{message.pseudo}</Text>
+                                </View>
                             </View>
                         ))
                 }
@@ -83,11 +85,10 @@ const styles = StyleSheet.create({
         backgroundColor: '#8a8d91',
         padding: 20,
         marginVertical: 5,
-        marginLeft: 16,
-        marginRight: '50%',
+        marginHorizontal: 5,
         flex: 1,
         borderRadius: 20,
-        maxWidth: '50%',
+        maxWidth: '65%'
     },
     title: {
         fontSize: 16,
@@ -95,24 +96,12 @@ const styles = StyleSheet.create({
     subtitle: {
         fontSize: 12,
     },
-    messageRight: {
-        backgroundColor: 'rgb(0, 132, 255)',
-        padding: 20,
-        marginVertical: 5,
-        marginRight: 16,
-        marginLeft: '50%',
-        flex: 1,
-        borderRadius: 20,
-        maxWidth: '50%',
-    },
-    titleRight: {
-        fontSize: 16,
+    textRight: {
         textAlign: 'right',
     },
-    subtitleRight: {
-        fontSize: 12,
-        textAlign: 'right',
-    }
+    textLeft: {
+        textAlign: 'left',
+    },
 });
 
 const mapStateToProps = (state) => {
