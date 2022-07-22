@@ -6,19 +6,24 @@ import * as Location from 'expo-location';
 import * as Permissions from 'expo-permissions';
 import { Button, Overlay, Input } from 'react-native-elements';
 import FontAwesomeIcon from 'react-native-vector-icons/FontAwesome';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import socketIOClient from "socket.io-client";
 
+const socket = socketIOClient("http://192.168.0.169:3000");
 
 function MapScreen(props) {
 
   const [currentLatitude, setCurrentLatitude] = useState(45.764043);
   const [currentLongitude, setCurrentLongitude] = useState(4.835659);
   const [addPOI, setAddPOI] = useState(false);
-  const [listPOI, setListPOI] = useState([]);
+  //const [listPOI, setListPOI] = useState([]);
   const [poi, setPOI] = useState({});
   const [titlePOI, setTitlePOI] = useState('');
   const [descriptionPOI, setDescriptionPOI] = useState('');
 
   const [visibleOverlayPOI, setVisibleOverlayPOI] = useState(false);
+
+  const [listUserPosition, setListUserPosition] = useState([]);
 
   const toggleOverlayPOI = () => {
     setVisibleOverlayPOI(!visibleOverlayPOI);
@@ -37,7 +42,32 @@ function MapScreen(props) {
       }
     }
     askPermissions();
+
+    AsyncStorage.getItem('listPOI', (err, data) => {
+      if (data) {
+        JSON.parse(data).forEach(poi => {
+          props.addPOI(poi);
+        })
+      }
+    })
+
   }, []);
+
+  useEffect(() => {
+    // send my current position to the server
+    socket.emit('sendMyPositionToAll', {pseudo: props.pseudo, latitude: currentLatitude, longitude: currentLongitude});
+    return () => socket.off('sendMyPositionToAll');
+  }, [currentLatitude, currentLongitude])
+
+  useEffect(() => {
+    // receive the list of user positions
+    socket.on('newUserPositionFromServer', (userPosition) => {
+      let listUserPositionFiltered = listUserPosition.filter(pos => pos.pseudo !== userPosition.pseudo);
+      setListUserPosition([...listUserPositionFiltered, userPosition]);
+    });
+    return () => socket.off('newUserPositionFromServer');
+  }, [listUserPosition])
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -50,7 +80,7 @@ function MapScreen(props) {
           onChangeText={(value) => setTitlePOI(value)}
           value={titlePOI}
         />
-        <Input placeholder='Description' 
+        <Input placeholder='Description'
           onChangeText={(value) => setDescriptionPOI(value)}
           value={descriptionPOI}
         />
@@ -65,7 +95,8 @@ function MapScreen(props) {
           }
           buttonStyle={styles.btnContainerAddActive}
           onPress={() => {
-            props.addPOI({coordinate: poi, title: titlePOI, description: descriptionPOI});
+            props.addPOI({ coordinate: poi, title: titlePOI, description: descriptionPOI });
+            AsyncStorage.setItem('listPOI', JSON.stringify([...props.listPOI, { coordinate: poi, title: titlePOI, description: descriptionPOI }]));
             setAddPOI(false);
             setTitlePOI('');
             setDescriptionPOI('');
@@ -92,6 +123,7 @@ function MapScreen(props) {
           }
         }}
       >
+        {/* My marker */}
         <Marker
           coordinate={{
             latitude: currentLatitude,
@@ -101,6 +133,7 @@ function MapScreen(props) {
           description="I am here"
           pinColor="red"
         />
+        {/* Markers POIs */}
         {props.listPOI.map((m) => (
           <Marker
             key={`${m.id}_${m.coordinate}_${m.description}`}
@@ -110,6 +143,17 @@ function MapScreen(props) {
             pinColor="blue"
           />
         ))}
+
+        {/* Markers another users */}
+        {listUserPosition.map((m) => (
+          <Marker
+            key={`${m.id}_${m.pseudo}`}
+            coordinate={{latitude:m.latitude, longitude:m.longitude}}
+            title={m.pseudo}
+            pinColor="green"
+          />
+        ))}
+
       </MapView>
       <Button
         title={addPOI ? 'Please touch the map ' : 'Add POI'}
@@ -160,7 +204,7 @@ const mapStateToProps = (state) => {
 
 const mapDispatchToProps = (dispatch) => {
   return {
-      addPOI: (poi) => dispatch({ type: 'addPOI', poi: poi }),
+    addPOI: (poi) => dispatch({ type: 'addPOI', poi: poi }),
   }
 }
 

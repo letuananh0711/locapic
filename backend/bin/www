@@ -93,11 +93,21 @@ function onListening() {
 var io = require('socket.io')(server);
 
 io.on('connection', function(socket){
- console.log('a user connected');
- // recieve message sent from client
- socket.on('sendMessage', function(message){
-  console.log(message);
-  // send message recived to all client
-  io.emit('sendMessageToAll', message);
- });
+  console.log('a user connected');
+  // recieve message sent from client
+  socket.on('sendMessage', function(message){
+    // console.log(message);
+    // send message recived to all client
+    io.emit('sendMessageToAll', message);
+  });
+
+  // recieve position sent by user
+  socket.on('sendMyPositionToAll', function(userPosition){
+    console.log(userPosition);
+    // send back to all client
+    socket.broadcast.emit('newUserPositionFromServer', userPosition);
+  })
+
+
+
 });

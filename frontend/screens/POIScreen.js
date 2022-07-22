@@ -1,6 +1,7 @@
 import { connect } from 'react-redux';
 import { StyleSheet, Text, SafeAreaView, ScrollView, KeyboardAvoidingView } from 'react-native';
-import { ListItem, Button } from 'react-native-elements'
+import { ListItem, Button } from 'react-native-elements';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 function POIScreen(props) {
@@ -23,7 +24,10 @@ function POIScreen(props) {
                                 rightContent={
                                     <Button
                                         title="Delete"
-                                        onPress={() => props.deletePOI(poi)}
+                                        onPress={() => {
+                                            props.deletePOI(poi);
+                                            AsyncStorage.setItem('listPOI', JSON.stringify(props.listPOI.filter((item) => item !== poi)));
+                                        }}
                                         icon={{ name: 'delete', color: 'white' }}
                                         buttonStyle={{ minHeight: '100%', backgroundColor: 'red' }}
                                     />
