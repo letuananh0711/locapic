@@ -9,7 +9,7 @@ import { useEffect, useState, useRef } from 'react';
 // import the environment variables from env file
 import { SERVER_URL } from '@env';
 
-const socket = socketIOClient(SERVER_URL);
+//const socket = socketIOClient(SERVER_URL);
 
 function ChatScreen(props) {
     const [listMessage, setListMessage] = useState([]);
@@ -17,6 +17,8 @@ function ChatScreen(props) {
 
     // create a ref for scroller
     const scrollRef = useRef();
+    // create a ref for socket
+    const socket = useRef();
 
     const emojiMap = {
         ":)": "\u263A",
@@ -28,7 +30,12 @@ function ChatScreen(props) {
     const fuckWRegex = /\w*fuck\w*/gi;
 
     useEffect(() => {
-        socket.on('sendMessageToAll', (newMessage) => {
+        // Initialize socket when ChatScreen is mounted
+        socket.current = socketIOClient(SERVER_URL);
+    }, []);
+
+    useEffect(() => {
+        socket.current.on('sendMessageToAll', (newMessage) => {
             let emojiMessage = newMessage.currentMessage.replace(emojiRegex, (m) => emojiMap[m.toLowerCase()]);
             let fuckWordMessage = emojiMessage.replace(fuckWRegex, '\u2022\u2022\u2022');
             setListMessage([...listMessage, { ...newMessage, currentMessage: fuckWordMessage }]);
@@ -38,8 +45,8 @@ function ChatScreen(props) {
         scrollRef.current.scrollToEnd({
             animated: true,
         });
-        
-        return () => socket.off();
+
+        return () => socket.current.off();
     }, [listMessage]);
 
 
@@ -51,12 +58,12 @@ function ChatScreen(props) {
                     listMessage.map((message, i) =>
                     (
 
-                            <View key={i} style={[{ flex: 1 }, message.pseudo === props.pseudo ? { flexDirection: 'row-reverse' } : { flexDirection: 'row' }]}>
-                                <View style={styles.message}>
-                                    <Text style={[styles.title, message.pseudo === props.pseudo ? styles.textRight : styles.textLeft]}>{message.currentMessage}</Text>
-                                    <Text style={[styles.subtitle, message.pseudo === props.pseudo ? styles.textRight : styles.textLeft]}>{message.pseudo}</Text>
-                                </View>
+                        <View key={i} style={[{ flex: 1 }, message.pseudo === props.pseudo ? { flexDirection: 'row-reverse' } : { flexDirection: 'row' }]}>
+                            <View style={styles.message}>
+                                <Text style={[styles.title, message.pseudo === props.pseudo ? styles.textRight : styles.textLeft]}>{message.currentMessage}</Text>
+                                <Text style={[styles.subtitle, message.pseudo === props.pseudo ? styles.textRight : styles.textLeft]}>{message.pseudo}</Text>
                             </View>
+                        </View>
                     ))
                 }
             </ScrollView>
@@ -69,7 +76,7 @@ function ChatScreen(props) {
                 <Button
                     title='Send'
                     onPress={() => {
-                        socket.emit('sendMessage', { currentMessage: currentMessage, pseudo: props.pseudo });
+                        socket.current.emit('sendMessage', { currentMessage: currentMessage, pseudo: props.pseudo });
                         setCurrentMessage('')
                     }}
                     icon={

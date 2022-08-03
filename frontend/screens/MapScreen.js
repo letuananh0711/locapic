@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { StyleSheet, Text, SafeAreaView, View } from 'react-native';
+import { useEffect, useState, useRef } from 'react';
+import { StyleSheet, SafeAreaView, View } from 'react-native';
 import { connect } from 'react-redux';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -10,9 +10,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import socketIOClient from "socket.io-client";
 
 // import the environment variables from env file
-import {SERVER_URL} from '@env';
+import { SERVER_URL } from '@env';
 
-const socket = socketIOClient(SERVER_URL);
+//const socket = socketIOClient(SERVER_URL);
 
 function MapScreen(props) {
   const [currentLatitude, setCurrentLatitude] = useState(45.764043);
@@ -31,13 +31,16 @@ function MapScreen(props) {
     setVisibleOverlayPOI(!visibleOverlayPOI);
   };
 
+  // create a ref for socket
+  const socket = useRef();
+
   useEffect(() => {
     async function askPermissions() {
       let { status } = await Permissions.askAsync(Permissions.LOCATION);
       if (status === 'granted') {
         //let currrentLocation = await Location.getCurrentPositionAsync({});
         //console.log(currrentLocation);
-        Location.watchPositionAsync({ distanceInterval: 1 }, (location) => {
+        Location.watchPositionAsync({ distanceInterval: 10 }, (location) => {
           setCurrentLatitude(location.coords.latitude);
           setCurrentLongitude(location.coords.longitude);
         });
@@ -53,30 +56,39 @@ function MapScreen(props) {
       }
     })
 
+    // Initialize socket when ChatScreen is mounted
+    socket.current = socketIOClient(SERVER_URL);
+
     return () => {
-      socket.off();
-      socket.disconnect();
+      socket.current.off();
+      socket.current.disconnect();
     };
   }, []);
 
   useEffect(() => {
     // send my current position to the server
-    socket.emit('sendMyPositionToAll', { pseudo: props.pseudo, latitude: currentLatitude, longitude: currentLongitude, socketId: socket.id });
-    return () => socket.off('sendMyPositionToAll');
+    socket.current.emit('sendMyPositionToAll',
+      {
+        pseudo: props.pseudo,
+        latitude: currentLatitude,
+        longitude: currentLongitude,
+        socketId: socket.id
+      });
+    return () => socket.current.off('sendMyPositionToAll');
   }, [currentLatitude, currentLongitude])
 
   useEffect(() => {
     // receive the list of user positions
-    socket.on('newUserPositionFromServer', (userPosition) => {
-      if(userPosition.status === 'disconnected'){
+    socket.current.on('newUserPositionFromServer', (userPosition) => {
+      if (userPosition.status === 'disconnected') {
         let listUserPositionFiltered = listUserPosition.filter(pos => pos.socketId !== userPosition.socketId);
         setListUserPosition([...listUserPositionFiltered]);
-      }else{
+      } else {
         let listUserPositionFiltered = listUserPosition.filter(pos => pos.pseudo !== userPosition.pseudo);
         setListUserPosition([...listUserPositionFiltered, userPosition]);
       }
     });
-    return () => socket.off('newUserPositionFromServer');
+    return () => socket.current.off('newUserPositionFromServer');
   }, [listUserPosition])
 
 
