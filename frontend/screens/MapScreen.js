@@ -12,7 +12,6 @@ import socketIOClient from "socket.io-client";
 const socket = socketIOClient("http://192.168.0.169:3000");
 
 function MapScreen(props) {
-
   const [currentLatitude, setCurrentLatitude] = useState(45.764043);
   const [currentLongitude, setCurrentLongitude] = useState(4.835659);
   const [addPOI, setAddPOI] = useState(false);
@@ -35,7 +34,7 @@ function MapScreen(props) {
       if (status === 'granted') {
         //let currrentLocation = await Location.getCurrentPositionAsync({});
         //console.log(currrentLocation);
-        Location.watchPositionAsync({ distanceInterval: 2 }, (location) => {
+        Location.watchPositionAsync({ distanceInterval: 1 }, (location) => {
           setCurrentLatitude(location.coords.latitude);
           setCurrentLongitude(location.coords.longitude);
         });
@@ -51,19 +50,28 @@ function MapScreen(props) {
       }
     })
 
+    return () => {
+      socket.off();
+      socket.disconnect();
+    };
   }, []);
 
   useEffect(() => {
     // send my current position to the server
-    socket.emit('sendMyPositionToAll', {pseudo: props.pseudo, latitude: currentLatitude, longitude: currentLongitude});
+    socket.emit('sendMyPositionToAll', { pseudo: props.pseudo, latitude: currentLatitude, longitude: currentLongitude, socketId: socket.id });
     return () => socket.off('sendMyPositionToAll');
   }, [currentLatitude, currentLongitude])
 
   useEffect(() => {
     // receive the list of user positions
     socket.on('newUserPositionFromServer', (userPosition) => {
-      let listUserPositionFiltered = listUserPosition.filter(pos => pos.pseudo !== userPosition.pseudo);
-      setListUserPosition([...listUserPositionFiltered, userPosition]);
+      if(userPosition.status === 'disconnected'){
+        let listUserPositionFiltered = listUserPosition.filter(pos => pos.socketId !== userPosition.socketId);
+        setListUserPosition([...listUserPositionFiltered]);
+      }else{
+        let listUserPositionFiltered = listUserPosition.filter(pos => pos.pseudo !== userPosition.pseudo);
+        setListUserPosition([...listUserPositionFiltered, userPosition]);
+      }
     });
     return () => socket.off('newUserPositionFromServer');
   }, [listUserPosition])
@@ -148,7 +156,7 @@ function MapScreen(props) {
         {listUserPosition.map((m) => (
           <Marker
             key={`${m.id}_${m.pseudo}`}
-            coordinate={{latitude:m.latitude, longitude:m.longitude}}
+            coordinate={{ latitude: m.latitude, longitude: m.longitude }}
             title={m.pseudo}
             pinColor="green"
           />
