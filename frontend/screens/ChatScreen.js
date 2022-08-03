@@ -1,12 +1,15 @@
 import { StyleSheet, ScrollView, SafeAreaView, KeyboardAvoidingView, Text, View } from 'react-native';
 import FontAwesomeIcon from 'react-native-vector-icons/FontAwesome';
-import { Input, Button, ListItem } from 'react-native-elements'
+import { Input, Button } from 'react-native-elements'
 import { connect } from 'react-redux';
 
 import socketIOClient from "socket.io-client";
 import { useEffect, useState } from 'react';
 
-const socket = socketIOClient("http://192.168.0.169:3000");
+// import the environment variables from env file
+import {SERVER_URL} from '@env';
+
+const socket = socketIOClient(SERVER_URL);
 
 function ChatScreen(props) {
     const [listMessage, setListMessage] = useState([]);
@@ -46,7 +49,6 @@ function ChatScreen(props) {
                         ))
                 }
             </ScrollView>
-
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
                 <Input placeholder='Your message...'

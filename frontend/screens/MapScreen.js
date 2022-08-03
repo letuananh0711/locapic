@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, SafeAreaView } from 'react-native';
+import { StyleSheet, Text, SafeAreaView, View } from 'react-native';
 import { connect } from 'react-redux';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -9,7 +9,10 @@ import FontAwesomeIcon from 'react-native-vector-icons/FontAwesome';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import socketIOClient from "socket.io-client";
 
-const socket = socketIOClient("http://192.168.0.169:3000");
+// import the environment variables from env file
+import {SERVER_URL} from '@env';
+
+const socket = socketIOClient(SERVER_URL);
 
 function MapScreen(props) {
   const [currentLatitude, setCurrentLatitude] = useState(45.764043);
