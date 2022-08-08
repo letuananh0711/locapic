@@ -1,16 +1,24 @@
 import { StyleSheet, ScrollView, SafeAreaView, KeyboardAvoidingView, Text, View } from 'react-native';
 import FontAwesomeIcon from 'react-native-vector-icons/FontAwesome';
-import { Input, Button, ListItem } from 'react-native-elements'
+import { Input, Button } from 'react-native-elements'
 import { connect } from 'react-redux';
 
 import socketIOClient from "socket.io-client";
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
-const socket = socketIOClient("http://192.168.0.169:3000");
+// import the environment variables from env file
+import { SERVER_URL } from '@env';
+
+//const socket = socketIOClient(SERVER_URL);
 
 function ChatScreen(props) {
     const [listMessage, setListMessage] = useState([]);
     const [currentMessage, setCurrentMessage] = useState('');
+
+    // create a ref for scroller
+    const scrollRef = useRef();
+    // create a ref for socket
+    const socket = useRef();
 
     const emojiMap = {
         ":)": "\u263A",
@@ -22,31 +30,43 @@ function ChatScreen(props) {
     const fuckWRegex = /\w*fuck\w*/gi;
 
     useEffect(() => {
-        socket.on('sendMessageToAll', (newMessage) => {
+        // Initialize socket when ChatScreen is mounted
+        socket.current = socketIOClient(SERVER_URL);
+    }, []);
+
+    useEffect(() => {
+        socket.current.on('sendMessageToAll', (newMessage) => {
             let emojiMessage = newMessage.currentMessage.replace(emojiRegex, (m) => emojiMap[m.toLowerCase()]);
             let fuckWordMessage = emojiMessage.replace(fuckWRegex, '\u2022\u2022\u2022');
             setListMessage([...listMessage, { ...newMessage, currentMessage: fuckWordMessage }]);
         });
-        return () => socket.off();
+
+        // Fire the scroller to scroll to the end of ScrollView
+        scrollRef.current.scrollToEnd({
+            animated: true,
+        });
+
+        return () => socket.current.off();
     }, [listMessage]);
 
 
     return (
         <SafeAreaView style={styles.container}>
-            <ScrollView>
+            {/* Create a ref for the ScrollView */}
+            <ScrollView ref={scrollRef}>
                 {
-                    listMessage.map((message, i) => 
-                        (
-                            <View key={i} style={[{flex: 1}, message.pseudo===props.pseudo ? {flexDirection: 'row-reverse'} : {flexDirection: 'row'}]}>
-                                <View style={styles.message}>
-                                    <Text style={[styles.title, message.pseudo===props.pseudo ? styles.textRight : styles.textLeft]}>{message.currentMessage}</Text>
-                                    <Text style={[styles.subtitle, message.pseudo===props.pseudo ? styles.textRight : styles.textLeft]}>{message.pseudo}</Text>
-                                </View>
+                    listMessage.map((message, i) =>
+                    (
+
+                        <View key={i} style={[{ flex: 1 }, message.pseudo === props.pseudo ? { flexDirection: 'row-reverse' } : { flexDirection: 'row' }]}>
+                            <View style={styles.message}>
+                                <Text style={[styles.title, message.pseudo === props.pseudo ? styles.textRight : styles.textLeft]}>{message.currentMessage}</Text>
+                                <Text style={[styles.subtitle, message.pseudo === props.pseudo ? styles.textRight : styles.textLeft]}>{message.pseudo}</Text>
                             </View>
-                        ))
+                        </View>
+                    ))
                 }
             </ScrollView>
-
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
                 <Input placeholder='Your message...'
@@ -56,7 +76,7 @@ function ChatScreen(props) {
                 <Button
                     title='Send'
                     onPress={() => {
-                        socket.emit('sendMessage', { currentMessage: currentMessage, pseudo: props.pseudo });
+                        socket.current.emit('sendMessage', { currentMessage: currentMessage, pseudo: props.pseudo });
                         setCurrentMessage('')
                     }}
                     icon={

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { StyleSheet, Text, SafeAreaView } from 'react-native';
+import { useEffect, useState, useRef } from 'react';
+import { StyleSheet, SafeAreaView, View } from 'react-native';
 import { connect } from 'react-redux';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -9,10 +9,12 @@ import FontAwesomeIcon from 'react-native-vector-icons/FontAwesome';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import socketIOClient from "socket.io-client";
 
-const socket = socketIOClient("http://192.168.0.169:3000");
+// import the environment variables from env file
+import { SERVER_URL } from '@env';
+
+//const socket = socketIOClient(SERVER_URL);
 
 function MapScreen(props) {
-
   const [currentLatitude, setCurrentLatitude] = useState(45.764043);
   const [currentLongitude, setCurrentLongitude] = useState(4.835659);
   const [addPOI, setAddPOI] = useState(false);
@@ -29,13 +31,16 @@ function MapScreen(props) {
     setVisibleOverlayPOI(!visibleOverlayPOI);
   };
 
+  // create a ref for socket
+  const socket = useRef();
+
   useEffect(() => {
     async function askPermissions() {
       let { status } = await Permissions.askAsync(Permissions.LOCATION);
       if (status === 'granted') {
         //let currrentLocation = await Location.getCurrentPositionAsync({});
         //console.log(currrentLocation);
-        Location.watchPositionAsync({ distanceInterval: 2 }, (location) => {
+        Location.watchPositionAsync({ distanceInterval: 10 }, (location) => {
           setCurrentLatitude(location.coords.latitude);
           setCurrentLongitude(location.coords.longitude);
         });
@@ -51,21 +56,39 @@ function MapScreen(props) {
       }
     })
 
+    // Initialize socket when ChatScreen is mounted
+    socket.current = socketIOClient(SERVER_URL);
+
+    return () => {
+      socket.current.off();
+      socket.current.disconnect();
+    };
   }, []);
 
   useEffect(() => {
     // send my current position to the server
-    socket.emit('sendMyPositionToAll', {pseudo: props.pseudo, latitude: currentLatitude, longitude: currentLongitude});
-    return () => socket.off('sendMyPositionToAll');
+    socket.current.emit('sendMyPositionToAll',
+      {
+        pseudo: props.pseudo,
+        latitude: currentLatitude,
+        longitude: currentLongitude,
+        socketId: socket.id
+      });
+    return () => socket.current.off('sendMyPositionToAll');
   }, [currentLatitude, currentLongitude])
 
   useEffect(() => {
     // receive the list of user positions
-    socket.on('newUserPositionFromServer', (userPosition) => {
-      let listUserPositionFiltered = listUserPosition.filter(pos => pos.pseudo !== userPosition.pseudo);
-      setListUserPosition([...listUserPositionFiltered, userPosition]);
+    socket.current.on('newUserPositionFromServer', (userPosition) => {
+      if (userPosition.status === 'disconnected') {
+        let listUserPositionFiltered = listUserPosition.filter(pos => pos.socketId !== userPosition.socketId);
+        setListUserPosition([...listUserPositionFiltered]);
+      } else {
+        let listUserPositionFiltered = listUserPosition.filter(pos => pos.pseudo !== userPosition.pseudo);
+        setListUserPosition([...listUserPositionFiltered, userPosition]);
+      }
     });
-    return () => socket.off('newUserPositionFromServer');
+    return () => socket.current.off('newUserPositionFromServer');
   }, [listUserPosition])
 
 
@@ -148,7 +171,7 @@ function MapScreen(props) {
         {listUserPosition.map((m) => (
           <Marker
             key={`${m.id}_${m.pseudo}`}
-            coordinate={{latitude:m.latitude, longitude:m.longitude}}
+            coordinate={{ latitude: m.latitude, longitude: m.longitude }}
             title={m.pseudo}
             pinColor="green"
           />
